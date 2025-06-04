@@ -41,7 +41,7 @@ while true; do
     esac
 
     # Random sleep từ 10 đến 15 phút
-    SLEEP_TIME=$((600 + RANDOM % 300)) # 600s = 10 phút, 900s = 15 phút
-    echo "⏳ Waiting $SLEEP_TIME seconds (~$(($SLEEP_TIME / 60)) minutes) before next fault..."
+    SLEEP_TIME=$(80) # 600s = 10 phút, 900s = 15 phút
+    echo "⏳ Waiting $SLEEP_TIME seconds (~$(($SLEEP_TIME / 1)) seconds) before next fault..."
     sleep $SLEEP_TIME
 done
