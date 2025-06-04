@@ -6,13 +6,29 @@ route:
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 1h
-  receiver: 'lark'  # Receiver mặc định là Lark
+  receiver: 'discord'  
 
 receivers:
-- name: 'lark'
+- name: 'discord'
   webhook_configs:
-  - url: 'https://botbuilder.larksuite.com/api/trigger-webhook/81300dd2d53134e627fea2e44b300f05'
+  - url: 'https://discord.com/api/webhooks/1379390436543823982/UWLO83zSjOl54aQ1PLW7i1dnM2nYf5Gq5AvJExG2GLAUuWBB3EnYaHlnjASx6dkHRltZ'
     send_resolved: true
+    # Tùy chỉnh định dạng tin nhắn cho Discord
+    message: |
+      {{ if eq .Status "firing" }}:warning: **CẢNH BÁO** :warning:{{ else }}:white_check_mark: **ĐÃ GIẢI QUYẾT** :white_check_mark:{{ end }}
+      
+      {{ range .Alerts }}
+      **Cảnh báo:** {{ .Labels.alertname }}
+      **Mức độ:** {{ .Labels.severity }}
+      **Tóm tắt:** {{ .Annotations.summary }}
+      **Mô tả:** {{ .Annotations.description }}
+      **Thời gian bắt đầu:** {{ .StartsAt | date "2006-01-02T15:04:05Z07:00" }}
+      {{- if ne .Status "firing" }}
+      **Thời gian kết thúc:** {{ .EndsAt | date "2006-01-02T15:04:05Z07:00" }}
+      {{- end }}
+      
+      {{ end }}
+
 
 inhibit_rules:
   - source_match:
