@@ -4,37 +4,38 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.51.0
     ports:
-    - 8080:8080
+      - 8080:8080
     privileged: true
     devices:
       - /dev/kmsg
     volumes:
-    - /:/rootfs:ro
-    - /var/run:/var/run:ro
-    - /sys:/sys:ro
-    - /var/lib/docker/:/var/lib/docker:ro
-    - /dev/disk/:/dev/disk:ro
-    - /var/run/docker.sock:/var/run/docker.sock:ro
-    - /etc/machine-id:/etc/machine-id:ro
-    - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
 
   prometheus:
     image: prom/prometheus:v2.55.1
     ports:
-    - 9090:9090
+      - 9090:9090
     command:
-    - --config.file=/etc/prometheus/prometheus.yml
+      - --config.file=/etc/prometheus/prometheus.yml
     volumes:
-    - .docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
     depends_on:
-    - cadvisor
+      - cadvisor
 
   grafana:
     image: grafana/grafana:11.3.0-security-01
     ports:
-    - 4000:3000
+      - 4000:3000
     volumes:
-    - .docker/monitoring/data:/var/lib/grafana
+      - ./docker/monitoring/data:/var/lib/grafana
     restart: always
     depends_on:
-    - prometheus
+      - prometheus
