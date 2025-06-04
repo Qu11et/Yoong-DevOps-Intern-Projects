@@ -1,0 +1,50 @@
+groups:
+- name: container-alerts
+  rules:
+  - alert: HighCPUUsage
+    expr: rate(container_cpu_usage_seconds_total{container="your-container-name"}[30s]) * 100 > 80
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: "CPU usage is above 80% for 30 seconds"
+
+  - alert: HighMemoryUsage
+    expr: (container_memory_usage_bytes{container="your-container-name"} / container_spec_memory_limit_bytes{container="your-container-name"}) * 100 > 70
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: "Memory usage is above 70% for 30 seconds"
+
+  - alert: AppCrash
+    expr: changes(container_last_seen{container="your-container-name"}[30s]) > 0
+    for: 30s
+    labels:
+      severity: critical
+    annotations:
+      summary: "App has crashed or restarted in the last 30 seconds"
+
+  - alert: HighDiskUsage
+    expr: avg_over_time(container_fs_usage_bytes{container="your-container-name"}[30s]) > 500*1024*1024
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk usage above 500MB for 30 seconds"
+
+  - alert: AppSleep
+    expr: rate(container_cpu_usage_seconds_total{container="your-container-name"}[30s]) < 0.01
+    for: 30s
+    labels:
+      severity: critical
+    annotations:
+      summary: "App may be sleeping (no CPU activity in 30s)"
+
+  - alert: NetworkReceiveStall
+    expr: rate(container_network_receive_bytes_total{container="glitchbox", interface="eth0"}[30s]) < 1000
+    for: 30s
+    labels:
+      severity: warning
+    annotations:
+      summary: "Network receive rate unusually low on eth0"    
