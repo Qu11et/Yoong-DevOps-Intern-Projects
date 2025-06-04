@@ -36,7 +36,7 @@ while true; do
         ;;
       sleep)
         echo "⏳ App is sleeping (simulated hang)..."
-        sleep 600
+        sleep 60
         ;;
     esac
 
