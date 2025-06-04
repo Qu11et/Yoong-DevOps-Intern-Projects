@@ -6,3 +6,8 @@ scrape_configs:
     - cadvisor:8080
 rule_files:
   - "/etc/prometheus/alerts.yml"
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - alertmanager:9093

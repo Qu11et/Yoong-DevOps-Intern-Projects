@@ -1,0 +1,22 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'job', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'lark'  # Receiver mặc định là Lark
+
+receivers:
+- name: 'lark'
+  webhook_configs:
+  - url: 'https://botbuilder.larksuite.com/api/trigger-webhook/81300dd2d53134e627fea2e44b300f05'
+    send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
