@@ -25,8 +25,8 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
-      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./docker/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - .docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - .docker/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
     depends_on:
       - cadvisor
 
@@ -35,7 +35,7 @@ services:
     ports:
       - 4000:3000
     volumes:
-      - ./docker/monitoring/data:/var/lib/grafana
+      - .docker/monitoring/data:/var/lib/grafana
     restart: always
     depends_on:
       - prometheus
