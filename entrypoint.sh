@@ -36,12 +36,12 @@ while true; do
         ;;
       sleep)
         echo "⏳ App is sleeping (simulated hang)..."
-        sleep 60
+        sleep 600
         ;;
     esac
 
     # Random sleep từ 10 đến 15 phút
-    SLEEP_TIME=$(80) # 600s = 10 phút, 900s = 15 phút
-    echo "⏳ Waiting $SLEEP_TIME seconds (~$(($SLEEP_TIME / 1)) seconds) before next fault..."
+    SLEEP_TIME=$((75 + RANDOM % 21)) # 60s = 1 phút, 80s = 1 phút 20 giây
+    echo "⏳ Waiting $SLEEP_TIME seconds (~$(($SLEEP_TIME / 60)) minutes) before next fault..."
     sleep $SLEEP_TIME
 done
