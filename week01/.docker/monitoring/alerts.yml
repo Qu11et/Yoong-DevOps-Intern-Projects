@@ -1,50 +1,62 @@
 groups:
-- name: container-alerts
+- name: container_alerts
   rules:
-  - alert: HighCPUUsage
-    expr: rate(container_cpu_usage_seconds_total{container="glitchbox"}[5s]) * 100 > 80
+  # CPU Alert: tải CPU trên 80% trong 30 giây
+  - alert: ContainerCPUUsageHigh
+    expr: sum(rate(container_cpu_usage_seconds_total{name=~".*glitchbox.*"}[1m])) by (name) * 100 > 80
     for: 5s
     labels:
       severity: warning
     annotations:
-      summary: "CPU usage is above 80% for 5 seconds"
+      summary: "Container CPU usage cao ({{ $labels.name }})"
+      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 30 giây - có thể do chaosblade CPU load."
 
-  - alert: HighMemoryUsage
-    expr: (container_memory_usage_bytes{container="glitchbox "} / container_spec_memory_limit_bytes{container="glitchbox"}) * 100 > 70
+  # Memory Alert: tải RAM trên 70% trong 30 giây 
+  - alert: ContainerMemoryUsageHigh
+    expr: (container_memory_usage_bytes{name=~".*glitchbox.*"} / container_memory_max_usage_bytes{name=~".*glitchbox.*"} * 100) > 70
     for: 5s
     labels:
       severity: warning
     annotations:
-      summary: "Memory usage is above 70% for 5 seconds"
+      summary: "Container Memory usage cao ({{ $labels.name }})"
+      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% memory trong hơn 30 giây - có thể do chaosblade memory load."
 
-  - alert: AppCrash
-    expr: changes(container_last_seen{container="glitchbox"}[5s]) > 0
+  # Container Crash Alert
+  - alert: ContainerCrash
+    expr: absent(container_start_time_seconds{name=~".*glitchbox.*"})
     for: 5s
     labels:
       severity: critical
     annotations:
-      summary: "App has crashed or restarted in the last 5 seconds"
+      summary: "Container đã crash"
+      description: "Container glitchbox không còn tồn tại - có thể do chaosblade crash action."
 
-  - alert: HighDiskUsage
-    expr: avg_over_time(container_fs_usage_bytes{container="glitchbox"}[5s]) > 500*1024*1024
+  # Network Latency Alert: độ trễ mạng cao trên eth0
+  - alert: NetworkLatencyHigh
+    expr: rate(container_network_receive_errors_total{name=~".*glitchbox.*"}[1m]) > 0 or rate(container_network_transmit_errors_total{name=~".*glitchbox.*"}[1m]) > 0
     for: 5s
     labels:
       severity: warning
     annotations:
-      summary: "Disk usage above 500MB for 5 seconds"
+      summary: "Network latency cao trên eth0"
+      description: "Phát hiện lỗi mạng trên interface eth0 - có thể do chaosblade network delay."
 
-  - alert: AppSleep
-    expr: rate(container_cpu_usage_seconds_total{container="glitchbox"}[5s]) < 0.01
-    for: 5s
-    labels:
-      severity: critical
-    annotations:
-      summary: "App may be sleeping (no CPU activity in 5s)"
-
-  - alert: NetworkReceiveStall
-    expr: rate(container_network_receive_bytes_total{container="glitchbox", interface="eth0"}[5s]) < 1000
+  # Disk Usage Alert: ổ đĩa đạt trên 500MB 
+  - alert: DiskUsageHigh
+    expr: container_fs_usage_bytes{name=~".*glitchbox.*"} > 500 * 1024 * 1024
     for: 5s
     labels:
       severity: warning
     annotations:
-      summary: "Network receive rate unusually low on eth0"    
+      summary: "Container disk usage cao ({{ $labels.name }})"
+      description: "Container {{ $labels.name }} đang sử dụng trên 500MB đĩa - có thể do chaosblade disk fill."
+
+  # App Hang/Sleep Alert 
+  - alert: ContainerNoActivity
+    expr: avg_over_time(container_cpu_usage_seconds_total{name=~".*glitchbox.*"}[30s]) - avg_over_time(container_cpu_usage_seconds_total{name=~".*glitchbox.*"}[31s]) == 0
+    for: 5s
+    labels:
+      severity: warning
+    annotations:
+      summary: "Container có thể bị treo ({{ $labels.name }})"
+      description: "Container {{ $labels.name }} không có hoạt động CPU trong 30 giây - có thể do chaosblade sleep action."
