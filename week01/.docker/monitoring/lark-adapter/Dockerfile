@@ -10,5 +10,5 @@ RUN go mod init lark-alertmanager-adapter && \
 
 FROM alpine:latest
 COPY --from=builder /app/lark-alertmanager-adapter /usr/local/bin/
-EXPOSE 8080
+EXPOSE 8081
 CMD ["lark-alertmanager-adapter"]

@@ -60,10 +60,10 @@ services:
       context: .docker/monitoring/lark-adapter
       dockerfile: Dockerfile
     ports:
-      - 8080:8080
+      - 8081:8081
     environment:
       - LARK_WEBHOOK_URL=https://botbuilder.larksuite.com/api/trigger-webhook/81300dd2d53134e627fea2e44b300f05
-      - PORT=8080
+      - PORT=8081
       # Thêm các biến môi trường xác thực nếu cần
       # - AUTH_USER=admin
       # - AUTH_PASSWORD=secure_password
