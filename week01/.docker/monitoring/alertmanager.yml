@@ -11,10 +11,8 @@ route:
 receivers:
 - name: 'discord'
   webhook_configs:
-  - url: 'https://discord.com/api/webhooks/1379390436543823982/UWLO83zSjOl54aQ1PLW7i1dnM2nYf5Gq5AvJExG2GLAUuWBB3EnYaHlnjASx6dkHRltZ'
+  - url: 'http://discord-webhook-adapter:9094/discord'
     send_resolved: true
-    http_config: {}
-    max_alerts: 0
 
 inhibit_rules:
   - source_match:
