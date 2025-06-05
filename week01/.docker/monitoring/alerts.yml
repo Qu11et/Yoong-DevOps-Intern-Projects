@@ -9,7 +9,7 @@ groups:
       severity: warning
     annotations:
       summary: "Container CPU usage cao ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 30 giây - có thể do chaosblade CPU load."
+      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 5 giây - có thể do chaosblade CPU load."
 
   # Memory Alert: tải RAM trên 70% trong 30 giây 
   - alert: ContainerMemoryUsageHigh
@@ -19,7 +19,7 @@ groups:
       severity: warning
     annotations:
       summary: "Container Memory usage cao ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% memory trong hơn 30 giây - có thể do chaosblade memory load."
+      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% memory trong hơn 5 giây - có thể do chaosblade memory load."
 
   # Container Crash Alert
   - alert: ContainerCrash
@@ -59,4 +59,4 @@ groups:
       severity: warning
     annotations:
       summary: "Container có thể bị treo ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} không có hoạt động CPU trong 30 giây - có thể do chaosblade sleep action."
+      description: "Container {{ $labels.name }} không có hoạt động CPU trong 5 giây - có thể do chaosblade sleep action."
