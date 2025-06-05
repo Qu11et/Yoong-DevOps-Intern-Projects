@@ -18,6 +18,7 @@ services:
       - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
 
   prometheus:
+    container_name: prometheus
     image: prom/prometheus:v2.55.1
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -30,14 +31,16 @@ services:
       - alertmanager
 
   grafana:
+    container_name: grafana
     image: grafana/grafana:11.3.0-security-01
     ports:
-      - 4000:3000
+      - ${GRAFANA_PORT}:3000
     restart: always
     depends_on:
       - prometheus
 
   alertmanager:
+    container_name: alertmanager
     image: prom/alertmanager:v0.27.0
     volumes:
       - alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
@@ -47,6 +50,7 @@ services:
     restart: always
 
   discord-webhook-adapter:
+    container_name: discord-webhook-adapter
     image: benjojo/alertmanager-discord:latest
     environment:
       - DISCORD_WEBHOOK=${DISCORD_WEBHOOK_URL}
