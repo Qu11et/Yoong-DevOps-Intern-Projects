@@ -43,82 +43,28 @@ The system uses Prometheus, Alertmanager and Grafana to ensure Monitoring, Alert
 #### Architecture Diagram:
 <!-- Use Mermaid diagrams for better visualization -->
 ```mermaid
-graph TD
-subgraph AWS Cloud
-direction TB
-VPC[VPC]
-EC2[EC2 - DataSync Agent]
-VGW[AWS Virtual Private Gateway]
-S3[(Amazon S3 Bucket)]
-VPC --> EC2
-VPC --> VGW
-EC2 -->|Port 443| S3
-end
-
-subgraph VPN Tunnel
-VGW <---> VPN[Site-to-Site VPN Tunnel]
-end
-
-subgraph On-Premises
-direction TB
-OnPremLAN[On-Prem Network]
-FileServer[NFS/SMB Server]
-OnPremLAN --> FileServer
-VPN --> OnPremLAN
-end
+flowchart TD
+    subgraph GCP["GCP VM"]
+        subgraph Docker["Docker Environment"]
+            GB[Glitch Box App\nChaosBlade] -->|Metrics| CA[cAdvisor]
+            CA -->|Container Metrics| P[Prometheus]
+            P -->|Alerts| AM[Alertmanager]
+            AM -->|Webhook| AWA[Alert-webhook-adapter]
+            AWA -->|Formatted Alert| Discord[(Discord)]
+            P -->|Metrics| G[Grafana]
+            G -.->|Query| P
+        end
+        DC[docker-compose.yml] -->|Deploys| Docker
+    end
+    
+    GitHub[(GitHub)] -->|Pull| DC
 ```
-
-*Priority: Use Mermaid diagrams
 
 ### 3.2. Main Components
 
-#### CI/CD Tools:
-- **CI Tool:** [GitHub Actions, GitLab CI, Jenkins]
-  - Role: [Describe role]
-  - Configuration: [Configuration file]
-
-#### Deployment Mechanism:
-- **CD Tool:** [ArgoCD, Helm, kubectl]
-  - Role: [Describe role]
-  - Strategy: [Blue-Green, Rolling Update]
-
-#### Infrastructure:
-- **IaC Tool:** [Terraform, Ansible]
-  - Role: [Provisioning infrastructure]
-  - Modules: [List of modules]
-
 #### Monitoring & Alerting:
-- **Monitoring:** [Prometheus, Grafana, DataDog]
-- **Logging:** [ELK Stack, Loki, CloudWatch]
-- **Alerting:** [AlertManager, PagerDuty, Slack]
-
-### 3.3. Execution Workflow
-
-#### Automated Workflow:
-1. **Trigger:** [Git push, Pull Request, Schedule]
-2. **Build Phase:**
-   - Code checkout
-   - Dependency installation
-   - Unit tests execution
-   - Code quality checks
-3. **Test Phase:**
-   - Integration tests
-   - Security scanning
-   - Performance tests
-4. **Build Image:**
-   - Docker image build
-   - Image vulnerability scan
-   - Tag and version
-5. **Push Image:**
-   - Push to container registry
-   - Update manifest files
-6. **Deploy:**
-   - Deploy to target environment
-   - Health checks
-   - Smoke tests
-7. **Notification:**
-   - Success/failure notification
-   - Metrics collection
+- **Monitoring:** Prometheus, Grafana
+- **Alerting:** AlertManager
 
 ## 4. Implementation Guide
 
@@ -126,60 +72,81 @@ end
 
 #### Repository Structure:
 ```
-project-root/
-├── .github/workflows/           # GitHub Actions workflows
-│   ├── ci.yml
-│   └── cd.yml
-├── compomnet-name-01/                      # Docker configurations
+project-01/
+├── glitchbox-app/           # App deployment
 │   ├── Dockerfile
-│   └── docker-compose.yml
-|   |── Configuration.yml
-|   |__ .env
-├── terraform/                   # Infrastructure as Code
-│   ├── main.tf
-│   └── variables.tf
-├── scripts/                     # Automation scripts
-│   ├── deploy.sh
-│   └── rollback.sh
+│   ├── docker-compose.yml
+|   └── entrypoint.sh
+├── monitoring/              # Monitoring tool deployment
+│   ├── .env           
+│   ├── alertmanager.yml
+│   ├── alerts.yml
+|   ├── docker-compose.yml
+|   └── prometheus.yml
 ```
 
 #### Key Files:
-- **Dockerfile:** [Docker image configuration description]
-- **CI/CD Pipeline:** [.github/workflows/, .gitlab-ci.yml, Jenkinsfile]
-- **Infrastructure:** [main.tf, ansible-playbook.yml]
-- **Deployment:** [deployment.yaml, helm charts]
+- **Dockerfile:** Install ChaosBlade app
+- **glitchbox-app/docker-compose.yml:** Build Glitchbox App from Dockerfile with "healthcheck" enabled
+- **monitoring/docker-compose.yml:** Build necessary tool from available images
 
 ### 4.2. Initial Setup
 
 #### Prerequisites:
 ```bash
-# Install required tools
-sudo apt update && sudo apt install -y docker.io git curl
+# Set up Docker's apt repository
+
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+#Install the Docker packages.
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
 
 #### Configuration Steps:
 1. **Clone repository:**
    ```bash
-   git clone [repository-url]
-   cd [project-directory]
-   ```
+   #You will need to create a token on github and enter it in the password field when cloning the repository.
+   git clone https://github.com/Qu11et/Yoong-DevOps-Project-01.git
 
-2. **Configure credentials:**
-   ```bash
-   # Setup Docker Hub credentials
-   docker login
+   #save the token so you don't have to re-enter it every time you execute git command
+   git config --global credential.helper cache
    
-   # Setup cloud provider credentials
-   export AWS_ACCESS_KEY_ID="your-key"
-   export AWS_SECRET_ACCESS_KEY="your-secret"
+   cd Yoong-DevOps-Project-01/project-01
    ```
 
-3. **Initialize infrastructure:**
+2. **Run docker compose**
    ```bash
-   cd terraform/
-   terraform init
-   terraform plan
-   terraform apply
+   #Added user into docker group
+   sudo usermod -aG docker $USER
+   
+   cd glitchbox-app
+   docker compose build
+   docker compose up -d
+   
+   cd monitoring
+   docker compose build
+   docker compose up -d
+
+   #Check containers status
+   docker ps
+   docker logs [name of the container which is having problem]
+   ```
+
+3. **Access the Grafana dashboard**
+   ```bash
+   #Go to your browser, enter [vm's external IP]:4000
    ```
 
 ### 4.3. Configuration Variables
@@ -187,28 +154,23 @@ sudo apt update && sudo apt install -y docker.io git curl
 #### Environment Variables:
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `DOCKER_REGISTRY` | Container registry URL | `docker.io/username` | Yes |
-| `KUBECONFIG` | Kubernetes config path | `~/.kube/config` | Yes |
-| `SLACK_WEBHOOK_URL` | Slack notification URL | `https://hooks.slack.com/...` | No |
-| `ENVIRONMENT` | Deployment environment | `staging/production` | Yes |
-
-#### Secrets Management:
-- **GitHub Secrets:** [List of secrets to create]
-- **Kubernetes Secrets:** [ConfigMaps and Secrets]
-- **Cloud Provider Secrets:** [IAM roles, service accounts]
+| `DISCORD_WEBHOOK_URL` | Discord Webhook URL | `https://discord.com/api/webhooks/0000/xxxxxxxxx` | Yes |
+| `GRAFANA_PORT` | Grafana's exposed port | `xxxx` | Yes |
 
 #### Metrics Dashboard:
-[Link to Grafana dashboard or screenshot]
+
 
 ## 5. Appendix
 
 ### 5.1. Tools Used
 | Tool | Version | Purpose | Documentation |
 |------|---------|---------|---------------|
-| Docker | 24.0+ | Containerization | [docs.docker.com](https://docs.docker.com) |
-| Kubernetes | 1.28+ | Orchestration | [kubernetes.io](https://kubernetes.io) |
-| GitHub Actions | - | CI/CD | [docs.github.com](https://docs.github.com/actions) |
-| Terraform | 1.5+ | Infrastructure | [terraform.io](https://terraform.io) |
+| Docker       | 24.0+ | Containerization | https://docs.docker.com                         |
+| Prometheus   | 2.55+ | Monitoring       | https://prometheus.io                           |
+| cAdvisor     | 0.51+ | Monitoring       | https://github.com/google/cadvisor              |
+| Grafana      | 11.3+ | Visualization    | https://grafana.com                             |
+| AlertManager | 0.27+ | Alerting         | https://github.com/prometheus/alertmanager      |
+| AlertManager-Discord | - | Alerting     | https://github.com/benjojo/alertmanager-discord |
 
 ### 5.2. References
 - [Official Documentation Links]
