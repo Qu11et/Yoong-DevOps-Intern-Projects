@@ -158,6 +158,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | `GRAFANA_PORT` | Grafana's exposed port | `xxxx` | Yes |
 
 #### Metrics Dashboard:
+![image](https://github.com/user-attachments/assets/d2f4f2b1-0c97-4d6e-b147-8858ac695faa)
 
 
 ## 5. Appendix
@@ -174,3 +175,4 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 
 ### 5.2. References
 - https://aakibkhan1.medium.com/project-10-deployment-of-application-using-github-actions-c56dd92c3779
+- https://viblo.asia/p/giam-sat-ung-dung-docker-voi-cadvisor-prometheus-va-grafana-RQqKLevMZ7z
