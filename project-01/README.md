@@ -173,7 +173,4 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | AlertManager-Discord | - | Alerting     | https://github.com/benjojo/alertmanager-discord |
 
 ### 5.2. References
-- [Official Documentation Links]
-- [Best Practices Guides]
-- [Architecture References]
-- [Security Guidelines]
+- https://aakibkhan1.medium.com/project-10-deployment-of-application-using-github-actions-c56dd92c3779
