@@ -18,6 +18,8 @@ services:
   prometheus:
     container_name: prometheus
     image: prom/prometheus:v2.55.1
+    ports:
+      - ${PROMETHEUS_PORT}:9090
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     volumes:
