@@ -35,6 +35,8 @@ services:
     image: grafana/grafana:11.3.0-security-01
     ports:
       - ${GRAFANA_PORT}:3000
+    volumes:
+    - ./grafana-data:/var/lib/grafana  
     restart: always
     depends_on:
       - prometheus
