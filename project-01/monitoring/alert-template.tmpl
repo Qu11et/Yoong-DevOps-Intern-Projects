@@ -1,0 +1,8 @@
+{{ define "discord.default.message" }}
+**Alert:** {{ .CommonLabels.alertname }}
+**Severity:** {{ .CommonLabels.severity }}
+**Instance:** {{ .CommonLabels.instance }}
+**Description:** {{ .Annotations.description }}
+
+[View in Grafana](${GRAFANA_URL})
+{{ end }}

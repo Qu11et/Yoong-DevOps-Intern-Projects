@@ -46,6 +46,7 @@ services:
     image: prom/alertmanager:v0.27.0
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./alert-template.tmpl:/etc/alertmanager/alert-template.tmpl:ro
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'

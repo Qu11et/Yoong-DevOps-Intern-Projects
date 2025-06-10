@@ -8,8 +8,9 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Container CPU usage cao ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 5 giây - có thể do chaosblade CPU load."
+      # summary: "Container CPU usage cao ({{ $labels.name }})"
+      # description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 5 giây - có thể do chaosblade CPU load."
+      grafana_link: "${GRAFANA_URL}""
 
   # Memory Alert: tải RAM trên 70% trong 30 giây 
   - alert: ContainerMemoryUsageHigh
@@ -18,8 +19,9 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Container Memory usage cao ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% memory trong hơn 5 giây - có thể do chaosblade memory load."
+      # summary: "Container Memory usage cao ({{ $labels.name }})"
+      # description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% memory trong hơn 5 giây - có thể do chaosblade memory load."
+      grafana_link: "${GRAFANA_URL}"
 
   # Container Crash Alert
   - alert: ContainerCrash
@@ -28,8 +30,9 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "Container đã crash"
-      description: "Container glitchbox không còn tồn tại - có thể do chaosblade crash action."
+      # summary: "Container đã crash"
+      # description: "Container glitchbox không còn tồn tại - có thể do chaosblade crash action."
+      grafana_link: "${GRAFANA_URL}"
 
   # Network Latency Alert: độ trễ mạng cao trên eth0
   - alert: NetworkLatencyHigh
@@ -38,8 +41,9 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Network latency cao trên eth0"
-      description: "Phát hiện lỗi mạng trên interface eth0 - có thể do chaosblade network delay."
+      # summary: "Network latency cao trên eth0"
+      # description: "Phát hiện lỗi mạng trên interface eth0 - có thể do chaosblade network delay."
+      grafana_link: "${GRAFANA_URL}"
 
   # Disk Usage Alert: ổ đĩa đạt trên 500MB 
   - alert: DiskUsageHigh
@@ -48,8 +52,9 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Container disk usage cao ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} đang sử dụng trên 500MB đĩa - có thể do chaosblade disk fill."
+      # summary: "Container disk usage cao ({{ $labels.name }})"
+      # description: "Container {{ $labels.name }} đang sử dụng trên 500MB đĩa - có thể do chaosblade disk fill."
+      grafana_link: "${GRAFANA_URL}"
 
   # App Hang/Sleep Alert 
   - alert: ContainerNoActivity
@@ -58,5 +63,6 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Container có thể bị treo ({{ $labels.name }})"
-      description: "Container {{ $labels.name }} không có hoạt động CPU trong 5 giây - có thể do chaosblade sleep action."
+      # summary: "Container có thể bị treo ({{ $labels.name }})"
+      # description: "Container {{ $labels.name }} không có hoạt động CPU trong 5 giây - có thể do chaosblade sleep action."
+      grafana_link: "${GRAFANA_URL}"

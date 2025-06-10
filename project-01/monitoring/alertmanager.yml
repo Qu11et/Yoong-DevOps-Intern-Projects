@@ -14,6 +14,9 @@ receivers:
   - url: 'http://discord-webhook-adapter:9094/discord'
     send_resolved: true
 
+templates:
+  - '/etc/alertmanager/alert-template.tmpl'
+  
 inhibit_rules:
   - source_match:
       severity: 'critical'
