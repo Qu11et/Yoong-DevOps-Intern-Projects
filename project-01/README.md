@@ -78,7 +78,8 @@ project-01/
 │   ├── docker-compose.yml
 |   └── entrypoint.sh
 ├── monitoring/              # Monitoring tool deployment
-│   ├── .env           
+│   ├── .env
+|   ├── alert-template.tmpl   
 │   ├── alertmanager.yml
 │   ├── alerts.yml
 |   ├── docker-compose.yml
@@ -94,8 +95,8 @@ project-01/
 
 #### Cloud Deployment Steps
 1. **Create a GCP VM instance:**
-- First, you access the link below: https://console.cloud.google.com/
-- You go to Computer Engine => VM instances => Create instances.
+- First, access the link below: https://console.cloud.google.com/
+- Go to Computer Engine => VM instances => Create instances.
 - Then you just need to configure the VM according to your usage needs, then click create and you're done.
 
 2. **Configure Firewall:**
@@ -150,7 +151,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
    #save the token so you don't have to re-enter it every time you execute git command
    git config --global credential.helper cache
    
-   cd Yoong-DevOps-Project-01/project-01
+   cd Yoong-DevOps-Intern-Projects/project-01
    ```
 
 2. **Run docker compose**
@@ -161,20 +162,21 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
    cd glitchbox-app
    docker compose build
    docker compose up -d
+   cd ../
    
    cd monitoring
    docker compose build
    docker compose up -d
+   cd ../
 
    #Check containers status
    docker ps
-   docker logs [name of the container which is having problem]
+   docker logs glitchbox
    ```
 
 3. **Access the Grafana dashboard**
-   ```bash
-   #Go to your browser, enter [vm's external IP]:4000
-   ```
+  Finally, go to your browser, enter [vm's external IP]:4000
+   
 
 ### 4.3. Configuration Variables
 
@@ -183,6 +185,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 |----------|-------------|---------|----------|
 | `DISCORD_WEBHOOK_URL` | Discord Webhook URL | `https://discord.com/api/webhooks/0000/xxxxxxxxx` | Yes |
 | `GRAFANA_PORT` | Grafana's exposed port | `xxxx` | Yes |
+| `PROMETHEUS_PORT` | Prometheus's exposed port | `xxxx` | Yes |
 
 #### Metrics Dashboard:
 ![image](https://github.com/user-attachments/assets/d2f4f2b1-0c97-4d6e-b147-8858ac695faa)
