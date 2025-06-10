@@ -174,8 +174,8 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
    docker logs glitchbox
    ```
 
-3. **Access the Grafana dashboard**
-  Finally, go to your browser, enter [vm's external IP]:4000
+3. **Access the Grafana dashboard:**
+  - Finally, go to your browser, enter [vm's external IP]:4000
    
 
 ### 4.3. Configuration Variables
