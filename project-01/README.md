@@ -92,6 +92,33 @@ project-01/
 
 ### 4.2. Initial Setup
 
+#### Cloud Deployment Steps
+1. **Create a GCP VM instance:**
+- First, you access the link below: https://console.cloud.google.com/
+- You go to Computer Engine => VM instances => Create instances.
+- Then you just need to configure the VM according to your usage needs, then click create and you're done.
+
+2. **Configure Firewall:**
+- Go to Google Cloud Console: https://console.cloud.google.com/
+- Go to “VPC network” → “Firewall rules”
+- Click “Create Firewall Rule”:
+- Name: Give the rule a name (e.g. allow-prometheus-grafana)
+- Network: Select the VPC network that contains your instance
+- Targets: Select “All instances in the network” or “Specified target tags” if you want to apply only to instances with certain tags.
+- Source IP ranges: Leave the default at 0.0.0.0/0 to allow from everywhere, or limit it to your liking.
+- Protocols and ports: Select “Specified protocols and ports”, tick TCP and enter: 9090,4000
+- Click “Create” to save the rule.
+
+3. **Connect to VM with SSH:**
+- On your PC, type ssh-keygen -t rsa -f <LOCATION> -C <USERNAME>
+- In the Google Cloud console, go to the Metadata page.
+- Click the SSH keys tab.
+- Click Edit.
+- Click Add item.
+- In the SSH key field that opens, add your public SSH key.
+- Click Save.
+- Back to your PC and open terminal, then type ssh =i <LOCATION> <USERNAME>@<VM-EXTERNAL-IP>
+
 #### Prerequisites:
 ```bash
 # Set up Docker's apt repository
@@ -158,6 +185,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | `GRAFANA_PORT` | Grafana's exposed port | `xxxx` | Yes |
 
 #### Metrics Dashboard:
+![image](https://github.com/user-attachments/assets/d2f4f2b1-0c97-4d6e-b147-8858ac695faa)
 
 
 ## 5. Appendix
@@ -174,3 +202,5 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 
 ### 5.2. References
 - https://aakibkhan1.medium.com/project-10-deployment-of-application-using-github-actions-c56dd92c3779
+- https://viblo.asia/p/giam-sat-ung-dung-docker-voi-cadvisor-prometheus-va-grafana-RQqKLevMZ7z
+- https://cloud.google.com/compute/docs/
