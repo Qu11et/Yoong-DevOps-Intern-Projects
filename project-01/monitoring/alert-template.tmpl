@@ -4,5 +4,5 @@
 **Instance:** {{ .CommonLabels.instance }}
 **Description:** {{ .Annotations.description }}
 
-[View in Grafana](${GRAFANA_URL})
+[View in Grafana](http://localhost:${GRAFANA_PORT}/d/cadvisor-exporter?var-instance={{ .CommonLabels.instance }})
 {{ end }}
