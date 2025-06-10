@@ -197,10 +197,10 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | Tool | Version | Purpose | Documentation |
 |------|---------|---------|---------------|
 | Docker       | 24.0+ | Containerization | https://docs.docker.com                         |
-| Prometheus   | 2.55+ | Monitoring       | https://prometheus.io                           |
-| cAdvisor     | 0.51+ | Monitoring       | https://github.com/google/cadvisor              |
-| Grafana      | 11.3+ | Visualization    | https://grafana.com                             |
-| AlertManager | 0.27+ | Alerting         | https://github.com/prometheus/alertmanager      |
+| Prometheus   | 2.55.1 | Monitoring       | https://prometheus.io                           |
+| cAdvisor     | 0.51.0 | Monitoring       | https://github.com/google/cadvisor              |
+| Grafana      | 11.3.0 | Visualization    | https://grafana.com                             |
+| AlertManager | 0.27.0 | Alerting         | https://github.com/prometheus/alertmanager      |
 | AlertManager-Discord | - | Alerting     | https://github.com/benjojo/alertmanager-discord |
 
 ### 5.2. References
