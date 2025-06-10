@@ -10,7 +10,7 @@ groups:
     annotations:
       # summary: "Container CPU usage cao ({{ $labels.name }})"
       # description: "Container {{ $labels.name }} đang sử dụng {{ $value | printf \"%.2f\" }}% CPU trong hơn 5 giây - có thể do chaosblade CPU load."
-      grafana_link: "${GRAFANA_URL}""
+      grafana_link: "${GRAFANA_URL}"
 
   # Memory Alert: tải RAM trên 70% trong 30 giây 
   - alert: ContainerMemoryUsageHigh
