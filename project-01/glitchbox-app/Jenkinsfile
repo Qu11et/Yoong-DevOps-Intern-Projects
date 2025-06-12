@@ -1,0 +1,255 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_HUB_REPO = 'qu1et/glitchbox'
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
+        GCP_CREDENTIALS = 'gcp-service-account'
+        GCP_PROJECT_ID = 'cobalt-cider-461804-q2'
+        GCP_ZONE = 'asia-southeast1-c'
+        GCP_INSTANCE = 'jenkins-server'
+        //SLACK_CHANNEL = '#devops-alerts'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Unit Tests') {
+            when {
+                anyOf {
+                    branch 'dev'
+                    changeRequest()
+                }
+            }
+            steps {
+                script {
+                    try {
+                        // Test Dockerfile syntax
+                        sh 'docker build --dry-run -f project-01/glitchbox-app/Dockerfile project-01/glitchbox-app/'
+                        
+                        // Test entrypoint script syntax
+                        sh 'bash -n project-01/glitchbox-app/entrypoint.sh'
+                        
+                        // Test docker-compose syntax
+                        sh 'docker-compose -f project-01/glitchbox-app/docker-compose.yml config'
+                        
+                        // Basic container test
+                        sh '''
+                            cd project-01/glitchbox-app
+                            docker build -t glitchbox-test .
+                            docker run --rm -d --name glitchbox-test-container glitchbox-test
+                            sleep 10
+                            docker logs glitchbox-test-container
+                            docker stop glitchbox-test-container || true
+                            docker rmi glitchbox-test
+                        '''
+                        
+                        currentBuild.result = 'SUCCESS'
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        error "Unit tests failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Wait for PR Approval') {
+            when {
+                changeRequest()
+            }
+            steps {
+                script {
+                    def pr = env.CHANGE_ID
+                    echo "Waiting for PR #${pr} approval..."
+                    
+                    // Kiểm tra trạng thái PR
+                    timeout(time: 24, unit: 'HOURS') {
+                        waitUntil {
+                            script {
+                                def response = sh(
+                                    script: "curl -s -H 'Authorization: token ${env.GITHUB_TOKEN}' https://api.github.com/repos/Qu11et/Yoong-DevOps-Intern-Projects/pulls/${pr}",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                def prData = readJSON text: response
+                                return prData.mergeable_state == 'clean' && prData.state == 'open'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build and Push Image') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    try {
+                        def imageTag = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                        def imageName = "${DOCKER_HUB_REPO}:${imageTag}"
+                        def latestImage = "${DOCKER_HUB_REPO}:latest"
+                        
+                        // Build image
+                        sh """
+                            cd project-01/glitchbox-app
+                            docker build -t ${imageName} .
+                            docker tag ${imageName} ${latestImage}
+                        """
+                        
+                        // Push to Docker Hub
+                        withCredentials([usernamePassword(credentialsId: DOCKER_HUB_CREDENTIALS, 
+                                                        usernameVariable: 'DOCKER_USER', 
+                                                        passwordVariable: 'DOCKER_PASS')]) {
+                            sh """
+                                echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                                docker push ${imageName}
+                                docker push ${latestImage}
+                                docker logout
+                            """
+                        }
+                        
+                        env.DOCKER_IMAGE = imageName
+                        currentBuild.result = 'SUCCESS'
+                        
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        error "Build and push failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to GCP') {
+            when {
+                branch 'main'
+                expression { currentBuild.result != 'FAILURE' }
+            }
+            steps {
+                script {
+                    try {
+                        withCredentials([file(credentialsId: GCP_CREDENTIALS, variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                            // Authenticate with GCP
+                            sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+                            sh "gcloud config set project ${GCP_PROJECT_ID}"
+                            
+                            // Determine deployment environment
+                            def deployEnv = env.BRANCH_NAME == 'main' ? 'prod' : 'dev'
+                            def containerName = "glitchbox-${deployEnv}"
+                            
+                            // Deploy script
+                            sh """
+                                gcloud compute ssh ${GCP_INSTANCE} --zone=${GCP_ZONE} --command="
+                                    # Pull latest image
+                                    docker pull ${env.DOCKER_IMAGE}
+                                    
+                                    # Stop and remove old container if exists
+                                    docker stop ${containerName} || true
+                                    docker rm ${containerName} || true
+                                    
+                                    # Run new container
+                                    docker run -d \\
+                                        --name ${containerName} \\
+                                        --privileged \\
+                                        -e TZ=Asia/Ho_Chi_Minh \\
+                                        --restart unless-stopped \\
+                                        ${env.DOCKER_IMAGE}
+                                    
+                                    # Verify deployment
+                                    sleep 10
+                                    if docker ps | grep ${containerName}; then
+                                        echo 'Deployment successful'
+                                        # Health check
+                                        docker exec ${containerName} blade version
+                                    else
+                                        echo 'Deployment failed'
+                                        exit 1
+                                    fi
+                                "
+                            """
+                        }
+                        currentBuild.result = 'SUCCESS'
+                        
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        error "Deployment failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Post-Deploy Monitoring') {
+            when {
+                branch 'main'
+                expression { currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                script {
+                    // Setup monitoring script
+                    sh """
+                        gcloud compute ssh ${GCP_INSTANCE} --zone=${GCP_ZONE} --command="
+                            # Create monitoring script
+                            cat > /tmp/monitor_glitchbox.sh << 'EOF'
+#!/bin/bash
+CONTAINER_NAME=glitchbox-prod
+LOG_FILE=/var/log/glitchbox-monitor.log
+
+while true; do
+    if ! docker ps | grep \$CONTAINER_NAME > /dev/null; then
+        echo \"\$(date): Container \$CONTAINER_NAME is not running!\" >> \$LOG_FILE
+        # Restart container
+        docker start \$CONTAINER_NAME || docker run -d --name \$CONTAINER_NAME --privileged -e TZ=Asia/Ho_Chi_Minh --restart unless-stopped ${env.DOCKER_IMAGE}
+    fi
+    sleep 30
+done
+EOF
+                            chmod +x /tmp/monitor_glitchbox.sh
+                            nohup /tmp/monitor_glitchbox.sh > /dev/null 2>&1 &
+                        "
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up local images
+            sh '''
+                docker image prune -f
+                docker container prune -f
+            '''
+        }
+        
+        // failure {
+        //     script {
+        //         def failedStage = env.STAGE_NAME
+        //         def buildUrl = env.BUILD_URL
+                
+        //         // Send notification
+        //         sh """
+        //             curl -X POST -H 'Content-type: application/json' \\
+        //             --data '{"text":"🚨 Jenkins Pipeline Failed\\nProject: Glitchbox\\nStage: ${failedStage}\\nBuild: ${buildUrl}"}' \\
+        //             ${env.SLACK_WEBHOOK_URL}
+        //         """
+        //     }
+        // }
+        
+        // success {
+        //     script {
+        //         if (env.BRANCH_NAME == 'main') {
+        //             sh """
+        //                 curl -X POST -H 'Content-type: application/json' \\
+        //                 --data '{"text":"✅ Glitchbox Deployment Successful\\nImage: ${env.DOCKER_IMAGE}\\nEnvironment: Production"}' \\
+        //                 ${env.SLACK_WEBHOOK_URL}
+        //             """
+        //         }
+        //     }
+        // }
+    }
+}
