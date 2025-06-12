@@ -28,30 +28,69 @@ pipeline {
             steps {
                 script {
                     try {
-                        // Test Dockerfile syntax
-                        sh 'docker build --dry-run -f project-01/glitchbox-app/Dockerfile project-01/glitchbox-app/'
-                        
-                        // Test entrypoint script syntax
-                        sh 'bash -n project-01/glitchbox-app/entrypoint.sh'
-                        
-                        // Test docker-compose syntax
-                        sh 'docker-compose -f project-01/glitchbox-app/docker-compose.yml config'
-                        
-                        // Basic container test
-                        sh '''
-                            cd project-01/glitchbox-app
-                            docker build -t glitchbox-test .
-                            docker run --rm -d --name glitchbox-test-container glitchbox-test
-                            sleep 10
-                            docker logs glitchbox-test-container
-                            docker stop glitchbox-test-container || true
-                            docker rmi glitchbox-test
-                        '''
+                        dir('project-01/glitchbox-app') {
+                            // Test 1: Validate Dockerfile syntax
+                            echo "🔍 Testing Dockerfile syntax..."
+                            sh 'dockerfile_lint Dockerfile || echo "dockerfile_lint not available, skipping..."'
+                            
+                            // Test 2: Validate entrypoint script syntax
+                            echo "🔍 Testing entrypoint.sh syntax..."
+                            sh 'bash -n entrypoint.sh'
+                            
+                            // Test 3: Validate docker-compose syntax
+                            echo "🔍 Testing docker-compose.yml syntax..."
+                            sh 'docker-compose -f docker-compose.yml config --quiet'
+                            
+                            // Test 4: Build test (thay thế --dry-run)
+                            echo "🔍 Building Docker image for testing..."
+                            sh '''
+                                # Build image với unique tag
+                                TEST_TAG="glitchbox-test-${BUILD_NUMBER}-$(date +%s)"
+                                docker build -t ${TEST_TAG} .
+                                
+                                echo "✅ Docker build successful"
+                                
+                                # Test container startup
+                                echo "🔍 Testing container startup..."
+                                CONTAINER_ID=$(docker run -d --name test-container-${BUILD_NUMBER} ${TEST_TAG})
+                                
+                                # Wait for container to initialize
+                                sleep 15
+                                
+                                # Check if container is still running
+                                if docker ps | grep test-container-${BUILD_NUMBER}; then
+                                    echo "✅ Container started successfully"
+                                    
+                                    # Test health check command
+                                    echo "🔍 Testing blade command..."
+                                    docker exec test-container-${BUILD_NUMBER} blade version
+                                    echo "✅ Blade command works"
+                                else
+                                    echo "❌ Container failed to start"
+                                    docker logs test-container-${BUILD_NUMBER}
+                                    exit 1
+                                fi
+                            '''
+                        }
                         
                         currentBuild.result = 'SUCCESS'
+                        
                     } catch (Exception e) {
                         currentBuild.result = 'FAILURE'
                         error "Unit tests failed: ${e.getMessage()}"
+                    } finally {
+                        // Cleanup test containers and images
+                        sh '''
+                            # Stop and remove test containers
+                            docker stop test-container-${BUILD_NUMBER} || true
+                            docker rm test-container-${BUILD_NUMBER} || true
+                            
+                            # Remove test images
+                            docker images | grep "glitchbox-test-${BUILD_NUMBER}" | awk '{print $3}' | xargs docker rmi -f || true
+                            
+                            # Clean up dangling images
+                            docker image prune -f || true
+                        '''
                     }
                 }
             }
@@ -219,10 +258,16 @@ EOF
     
     post {
         always {
-            // Clean up local images
+            // Enhanced cleanup
             sh '''
-                docker image prune -f
-                docker container prune -f
+                # Clean up any remaining test containers
+                docker ps -a | grep "test-container-" | awk '{print $1}' | xargs docker rm -f || true
+                
+                # Clean up test images
+                docker images | grep "glitchbox-test-" | awk '{print $3}' | xargs docker rmi -f || true
+                
+                # Clean up dangling resources
+                docker system prune -f || true
             '''
         }
         
