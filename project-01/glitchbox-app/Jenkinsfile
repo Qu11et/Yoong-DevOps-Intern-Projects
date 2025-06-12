@@ -1,0 +1,358 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKER_HUB_REPO = 'qu1et/glitchbox'
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
+        GCP_CREDENTIALS = 'gcp-service-account'
+        GCP_PROJECT_ID = 'cobalt-cider-461804-q2'
+        GCP_ZONE = 'asia-southeast1-c'
+        GCP_INSTANCE = 'jenkins-server'
+        //SLACK_CHANNEL = '#devops-alerts'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Unit Tests') {
+    when {
+        anyOf {
+            branch 'dev'
+            changeRequest()
+        }
+    }
+    steps {
+        script {
+            try {
+                dir('project-01/glitchbox-app') {
+                    // Test 1: Check required files exist
+                    echo "🔍 Checking required files..."
+                    sh '''
+                        test -f Dockerfile || { echo "❌ Dockerfile not found"; exit 1; }
+                        test -f entrypoint.sh || { echo "❌ entrypoint.sh not found"; exit 1; }
+                        test -f docker-compose.yml || { echo "❌ docker-compose.yml not found"; exit 1; }
+                        echo "✅ All required files present"
+                    '''
+                    
+                    // Test 2: Validate bash script syntax
+                    echo "🔍 Validating entrypoint.sh syntax..."
+                    sh 'bash -n entrypoint.sh'
+                    echo "✅ entrypoint.sh syntax is valid"
+                    
+                    // Test 3: Check Dockerfile basic structure
+                    echo "🔍 Validating Dockerfile structure..."
+                    sh '''
+                        # Check if Dockerfile has FROM instruction
+                        grep -q "^FROM" Dockerfile || { echo "❌ No FROM instruction found"; exit 1; }
+                        
+                        # Check if Dockerfile has CMD or ENTRYPOINT
+                        (grep -q "^CMD" Dockerfile || grep -q "^ENTRYPOINT" Dockerfile) || { echo "❌ No CMD/ENTRYPOINT found"; exit 1; }
+                        
+                        # Check for COPY instruction for entrypoint
+                        grep -q "COPY entrypoint.sh" Dockerfile || { echo "❌ entrypoint.sh not copied in Dockerfile"; exit 1; }
+                        
+                        echo "✅ Dockerfile structure is valid"
+                    '''
+                    
+                    // Test 4: Validate docker-compose syntax (with fallback)
+                    echo "🔍 Validating docker-compose.yml..."
+                    sh '''
+                        # Check which docker-compose command is available
+                        if command -v "docker compose" >/dev/null 2>&1; then
+                            echo "Using docker compose (v2)..."
+                            docker compose -f docker-compose.yml config --quiet
+                            echo "✅ docker-compose.yml is valid (tested with docker compose v2)"
+                        elif command -v docker-compose >/dev/null 2>&1; then
+                            echo "Using docker-compose (v1)..."
+                            docker-compose -f docker-compose.yml config --quiet
+                            echo "✅ docker-compose.yml is valid (tested with docker-compose v1)"
+                        else
+                            echo "⚠️ No docker-compose available, performing manual YAML validation..."
+                            
+                            # Basic YAML syntax check using Python (usually available)
+                            if command -v python3 >/dev/null 2>&1; then
+                                python3 -c "
+import yaml
+import sys
+try:
+    with open('docker-compose.yml', 'r') as f:
+        yaml.safe_load(f)
+    print('✅ docker-compose.yml YAML syntax is valid')
+except yaml.YAMLError as e:
+    print(f'❌ YAML syntax error: {e}')
+    sys.exit(1)
+except Exception as e:
+    print(f'❌ Error reading file: {e}')
+    sys.exit(1)
+"
+                            else
+                                echo "⚠️ Cannot validate docker-compose.yml - no validation tools available"
+                                echo "Checking basic structure manually..."
+                                
+                                # Basic structure checks
+                                grep -q "services:" docker-compose.yml || { echo "❌ No 'services:' section found"; exit 1; }
+                                grep -q "glitchbox:" docker-compose.yml || { echo "❌ No 'glitchbox' service found"; exit 1; }
+                                
+                                echo "✅ Basic docker-compose.yml structure looks good"
+                            fi
+                        fi
+                    '''
+                    
+                    // Test 5: Check entrypoint script content
+                    echo "🔍 Validating entrypoint.sh content..."
+                    sh '''
+                        # Check if script has shebang
+                        head -1 entrypoint.sh | grep -q "#!/bin/bash" || { echo "❌ Missing or incorrect shebang"; exit 1; }
+                        
+                        # Check if script has required variables/arrays
+                        grep -q "ACTIONS=" entrypoint.sh || { echo "❌ ACTIONS array not found"; exit 1; }
+                        
+                        # Check if script has main loop
+                        grep -q "while true" entrypoint.sh || { echo "❌ Main loop not found"; exit 1; }
+                        
+                        # Check if script has blade commands
+                        grep -q "blade create" entrypoint.sh || { echo "❌ Blade commands not found"; exit 1; }
+                        
+                        echo "✅ entrypoint.sh content validation passed"
+                    '''
+                    
+                    // Test 6: Security check
+                    echo "🔍 Basic security checks..."
+                    sh '''
+                        # Check if Dockerfile runs as root (security warning)
+                        if grep -q "USER root" Dockerfile; then
+                            echo "⚠️ WARNING: Container runs as root user"
+                        fi
+                        
+                        # Check for exposed ports
+                        if grep -q "EXPOSE" Dockerfile; then
+                            echo "ℹ️ Container exposes ports:"
+                            grep "EXPOSE" Dockerfile
+                        fi
+                        
+                        # Check for privileged mode requirement
+                        if grep -q "privileged.*true" docker-compose.yml; then
+                            echo "⚠️ WARNING: Container requires privileged mode"
+                        fi
+                        
+                        echo "✅ Security checks completed"
+                    '''
+                }
+                
+                currentBuild.result = 'SUCCESS'
+                echo "✅ All unit tests passed!"
+                
+            } catch (Exception e) {
+                currentBuild.result = 'FAILURE'
+                error "Unit tests failed: ${e.getMessage()}"
+            }
+        }
+    }
+}
+        
+        stage('Wait for PR Approval') {
+            when {
+                changeRequest()
+            }
+            steps {
+                script {
+                    def pr = env.CHANGE_ID
+                    echo "Waiting for PR #${pr} approval..."
+                    
+                    // Kiểm tra trạng thái PR
+                    timeout(time: 24, unit: 'HOURS') {
+                        waitUntil {
+                            script {
+                                def response = sh(
+                                    script: "curl -s -H 'Authorization: token ${env.GITHUB_TOKEN}' https://api.github.com/repos/Qu11et/Yoong-DevOps-Intern-Projects/pulls/${pr}",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                def prData = readJSON text: response
+                                return prData.mergeable_state == 'clean' && prData.state == 'open'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build and Push Image') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    try {
+                        def imageTag = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(7)}"
+                        def imageName = "${DOCKER_HUB_REPO}:${imageTag}"
+                        def latestImage = "${DOCKER_HUB_REPO}:latest"
+                        
+                        // Build image
+                        sh """
+                            cd project-01/glitchbox-app
+                            docker build -t ${imageName} .
+                            docker tag ${imageName} ${latestImage}
+                        """
+                        
+                        // Push to Docker Hub
+                        withCredentials([usernamePassword(credentialsId: DOCKER_HUB_CREDENTIALS, 
+                                                        usernameVariable: 'DOCKER_USER', 
+                                                        passwordVariable: 'DOCKER_PASS')]) {
+                            sh """
+                                echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
+                                docker push ${imageName}
+                                docker push ${latestImage}
+                                docker logout
+                            """
+                        }
+                        
+                        env.DOCKER_IMAGE = imageName
+                        currentBuild.result = 'SUCCESS'
+                        
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        error "Build and push failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to GCP') {
+            when {
+                branch 'main'
+                expression { currentBuild.result != 'FAILURE' }
+            }
+            steps {
+                script {
+                    try {
+                        withCredentials([file(credentialsId: GCP_CREDENTIALS, variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                            // Authenticate with GCP
+                            sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+                            sh "gcloud config set project ${GCP_PROJECT_ID}"
+                            
+                            // Determine deployment environment
+                            def deployEnv = env.BRANCH_NAME == 'main' ? 'prod' : 'dev'
+                            def containerName = "glitchbox-${deployEnv}"
+                            
+                            // Deploy script
+                            sh """
+                                gcloud compute ssh ${GCP_INSTANCE} --zone=${GCP_ZONE} --command="
+                                    # Pull latest image
+                                    docker pull ${env.DOCKER_IMAGE}
+                                    
+                                    # Stop and remove old container if exists
+                                    docker stop ${containerName} || true
+                                    docker rm ${containerName} || true
+                                    
+                                    # Run new container
+                                    docker run -d \\
+                                        --name ${containerName} \\
+                                        --privileged \\
+                                        -e TZ=Asia/Ho_Chi_Minh \\
+                                        --restart unless-stopped \\
+                                        ${env.DOCKER_IMAGE}
+                                    
+                                    # Verify deployment
+                                    sleep 10
+                                    if docker ps | grep ${containerName}; then
+                                        echo 'Deployment successful'
+                                        # Health check
+                                        docker exec ${containerName} blade version
+                                    else
+                                        echo 'Deployment failed'
+                                        exit 1
+                                    fi
+                                "
+                            """
+                        }
+                        currentBuild.result = 'SUCCESS'
+                        
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        error "Deployment failed: ${e.getMessage()}"
+                    }
+                }
+            }
+        }
+        
+        stage('Post-Deploy Monitoring') {
+            when {
+                branch 'main'
+                expression { currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                script {
+                    // Setup monitoring script
+                    sh """
+                        gcloud compute ssh ${GCP_INSTANCE} --zone=${GCP_ZONE} --command="
+                            # Create monitoring script
+                            cat > /tmp/monitor_glitchbox.sh << 'EOF'
+#!/bin/bash
+CONTAINER_NAME=glitchbox-prod
+LOG_FILE=/var/log/glitchbox-monitor.log
+
+while true; do
+    if ! docker ps | grep \$CONTAINER_NAME > /dev/null; then
+        echo \"\$(date): Container \$CONTAINER_NAME is not running!\" >> \$LOG_FILE
+        # Restart container
+        docker start \$CONTAINER_NAME || docker run -d --name \$CONTAINER_NAME --privileged -e TZ=Asia/Ho_Chi_Minh --restart unless-stopped ${env.DOCKER_IMAGE}
+    fi
+    sleep 30
+done
+EOF
+                            chmod +x /tmp/monitor_glitchbox.sh
+                            nohup /tmp/monitor_glitchbox.sh > /dev/null 2>&1 &
+                        "
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Enhanced cleanup
+            sh '''
+                # Clean up any remaining test containers
+                docker ps -a | grep "test-container-" | awk '{print $1}' | xargs docker rm -f || true
+                
+                # Clean up test images
+                docker images | grep "glitchbox-test-" | awk '{print $3}' | xargs docker rmi -f || true
+                
+                # Clean up dangling resources
+                docker system prune -f || true
+            '''
+        }
+        
+        // failure {
+        //     script {
+        //         def failedStage = env.STAGE_NAME
+        //         def buildUrl = env.BUILD_URL
+                
+        //         // Send notification
+        //         sh """
+        //             curl -X POST -H 'Content-type: application/json' \\
+        //             --data '{"text":"🚨 Jenkins Pipeline Failed\\nProject: Glitchbox\\nStage: ${failedStage}\\nBuild: ${buildUrl}"}' \\
+        //             ${env.SLACK_WEBHOOK_URL}
+        //         """
+        //     }
+        // }
+        
+        // success {
+        //     script {
+        //         if (env.BRANCH_NAME == 'main') {
+        //             sh """
+        //                 curl -X POST -H 'Content-type: application/json' \\
+        //                 --data '{"text":"✅ Glitchbox Deployment Successful\\nImage: ${env.DOCKER_IMAGE}\\nEnvironment: Production"}' \\
+        //                 ${env.SLACK_WEBHOOK_URL}
+        //             """
+        //         }
+        //     }
+        // }
+    }
+}
