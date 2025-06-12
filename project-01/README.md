@@ -107,7 +107,7 @@ project-01/
 - Network: Select the VPC network that contains your instance
 - Targets: Select “All instances in the network” or “Specified target tags” if you want to apply only to instances with certain tags.
 - Source IP ranges: Leave the default at 0.0.0.0/0 to allow from everywhere, or limit it to your liking.
-- Protocols and ports: Select “Specified protocols and ports”, tick TCP and enter: 9090,4000
+- Protocols and ports: Select “Specified protocols and ports”, tick TCP and enter: [PROMETHEUS_PORT],[GRAFANA_PORT]
 - Click “Create” to save the rule.
 
 3. **Connect to VM with SSH:**
@@ -175,7 +175,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
    ```
 
 3. **Access the Grafana dashboard:**
-  - Finally, go to your browser, enter [vm's external IP]:4000
+  - Finally, go to your browser, enter [vm's external IP]:[GRAFANA_PORT]
    
 
 ### 4.3. Configuration Variables
@@ -188,7 +188,7 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin 
 | `PROMETHEUS_PORT` | Prometheus's exposed port | `xxxx` | Yes |
 
 #### Metrics Dashboard:
-![image](https://github.com/user-attachments/assets/d2f4f2b1-0c97-4d6e-b147-8858ac695faa)
+![image](.\pics\grafana-dashboard.png)
 
 
 ## 5. Appendix
