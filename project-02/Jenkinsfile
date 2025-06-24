@@ -1,146 +1,148 @@
 pipeline {
-  agent any
+    agent none
 
-  environment {
-    BRANCH = "${env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'dev'}"
-    SSH_USER = 'TaiKhau'
-    GCP_VM_DEV = '34.143.160.187'
-    GCP_VM_PROD = '35.197.159.76'
-    DEPLOY_DIR = "/home/TaiKhau/app"
-    // Adding Docker Hub variables
-    DOCKER_HUB_CREDS = credentials('dockerhub-credentials')
-    DOCKER_HUB_USERNAME = "${DOCKER_HUB_CREDS_USR}"
-    DOCKER_IMAGE_PREFIX = "${DOCKER_HUB_USERNAME}"
-    // Adding GitHub credentials
-    GITHUB_TOKEN = credentials('github-token')
-  }
+    environment {
+        // Thông tin chung
+        SSH_USER = 'TaiKhau'
+        DEPLOY_DIR = "/home/TaiKhau/app"
 
-  stages {
-    stage('Checkout') {
-      steps {
-        git branch: "${BRANCH}", url: 'https://Qu11et:${GITHUB_TOKEN}@github.com/Qu11et/full-stack-fastapi-template-clone.git'
-        sh 'ls -la'  // Show workspace contents
-        sh 'pwd'     // Show current directory
-      }
+        // IP của GCP VMs
+        GCP_VM_DEV = '34.126.143.226'
+        GCP_VM_PROD = '34.143.235.29'
+
+        // Docker Hub
+        DOCKER_HUB_CREDS = credentials('dockerhub-credentials')
+        DOCKER_HUB_USERNAME = "${DOCKER_HUB_CREDS_USR}"
+        IMAGE_NAME = "${DOCKER_HUB_USERNAME}/aspnetapp"
+
+        // GitHub Token
+        GITHUB_TOKEN = credentials('github-token')
     }
 
-    stage('Build and Test') {
-      steps {
-        echo "Running on branch: ${BRANCH}"
+    triggers {
+        githubPush()
+    }
 
-        script {
-          if (BRANCH == 'dev') {
-            withCredentials([file(credentialsId: 'env-dev', variable: 'ENV_FILE')]) {
-              sh 'cp $ENV_FILE ./.env'
-              echo "Development environment file copied from credentials"
+    stages {
+        stage('Checkout') {
+            agent { label 'agent-builder' }
+            steps {
+                // Lấy nhánh hiện tại
+                script {
+                    env.CURRENT_BRANCH = env.BRANCH_NAME ?: env.GIT_BRANCH ?: 'dev'
+                }
+
+                // Clone với token an toàn
+                git branch: "${env.CURRENT_BRANCH}", url: "https://Qu11et:${GITHUB_TOKEN}@github.com/Qu11et/aspnetapp.git"
+
+                sh 'ls -la'
+                sh 'pwd'
             }
-          } else if (BRANCH == 'main') {
-            withCredentials([file(credentialsId: 'env-prod', variable: 'ENV_FILE')]) {
-              sh 'cp $ENV_FILE ./.env'
-              echo "Production environment file copied from credentials"
-            }
-          }
         }
 
-        // Run unit tests, lint, etc.
-      }
-    }
-
-    stage('Build Docker Images') {
-      steps {
-        script {
-          docker.build("${DOCKER_IMAGE_PREFIX}/my-frontend:${BRANCH}", 'frontend')
-          docker.build("${DOCKER_IMAGE_PREFIX}/my-backend:${BRANCH}", 'backend')
+        stage('Build') {
+            agent { label 'agent-builder' }
+            steps {
+                script {
+                    //def arch = ''
+                    sh """
+                    docker build --pull -t ${IMAGE_NAME}:${env.BUILD_NUMBER} .
+                    """
+                }
+            }
         }
-      }
-    }
 
-    stage('Push Images to Docker Hub') {
-      steps {
-        // Login to Docker Hub
-        sh "echo ${DOCKER_HUB_CREDS_PSW} | docker login -u ${DOCKER_HUB_CREDS_USR} --password-stdin"
-        
-        // Tag images with latest tag in addition to branch tag
-        sh """
-          docker tag ${DOCKER_IMAGE_PREFIX}/my-backend:${BRANCH} ${DOCKER_IMAGE_PREFIX}/my-backend:latest
-          docker tag ${DOCKER_IMAGE_PREFIX}/my-frontend:${BRANCH} ${DOCKER_IMAGE_PREFIX}/my-frontend:latest
-          
-          # Push images with branch tag
-          docker push ${DOCKER_IMAGE_PREFIX}/my-backend:${BRANCH}
-          docker push ${DOCKER_IMAGE_PREFIX}/my-frontend:${BRANCH}
-          
-          # Push images with latest tag
-          docker push ${DOCKER_IMAGE_PREFIX}/my-backend:latest
-          docker push ${DOCKER_IMAGE_PREFIX}/my-frontend:latest
-        """
-        
-        // Logout from Docker Hub
-        sh "docker logout"
-      }
-    }
+        stage('Test') {
+            agent { label 'agent-builder' }
+            steps {
+                sh """
+                docker build -t aspnetapp-test -f Dockerfile.test .
+                docker images | grep aspnetapp-test
+                """
+            }
+        }
 
-    stage('Deploy') {
-      steps {
-        withCredentials([file(credentialsId: 'ssh-private-key-file', variable: 'SSH_KEY')]) {
-          script {
-            //def branch = ${BRANCH}
-            def target_ip = (BRANCH == 'dev') ? GCP_VM_DEV : GCP_VM_PROD
+        stage('Push to Docker Hub') {
+            agent { label 'agent-builder' }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${IMAGE_NAME}:${env.BUILD_NUMBER}
+                    """
+                }
+            }
+        }
 
-            echo "Deploying to branch: ${BRANCH}, target VM: ${target_ip}"
-
-            try {
-              sh """
-                ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@$target_ip << 'EOF'
+        stage('Deploy to Dev') {
+            agent { label 'agent1' }
+            environment {
+                CONTAINER_PORT = "${DEPLOY_PORT}"
+            }
+            when {
+                branch 'dev'
+            }
+            steps {
+                withCredentials([file(credentialsId: 'ssh-private-key-file', variable: 'SSH_KEY')]) {
+                    script {
+                        sh """
+                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${GCP_VM_DEV} << EOF
 set -e
 trap 'echo "[ERROR] Deployment failed on \$HOSTNAME!" >&2; exit 1' ERR
 
-echo "Switching to deployment directory..."
-cd $DEPLOY_DIR
+echo "[INFO] Switching to deployment directory..."
+mkdir -p $DEPLOY_DIR && cd $DEPLOY_DIR
 
-echo "Pulling latest images..."
-docker pull ${DOCKER_IMAGE_PREFIX}/my-backend:${BRANCH}
-docker pull ${DOCKER_IMAGE_PREFIX}/my-frontend:${BRANCH}
+echo "[INFO] Pulling latest Docker image..."
+docker pull ${IMAGE_NAME}:${BUILD_NUMBER}
 
-echo "Stopping existing containers if they exist..."
-docker stop backend-container frontend-container || true
-docker rm backend-container frontend-container || true
+echo "[INFO] Restarting container..."
+docker stop aspnetapp || true
+docker rm aspnetapp || true
+docker run -d -p ${CONTAINER_PORT}:8080 --name aspnetapp ${IMAGE_NAME}:${BUILD_NUMBER}
 
-echo "Starting backend container..."
-docker run -d \\
-  --name backend-container \\
-  --restart unless-stopped \\
-  -p 8000:8000 \\
-  --env-file .env \\
-  ${DOCKER_IMAGE_PREFIX}/my-backend:${BRANCH}
-
-echo "Starting frontend container..."
-docker run -d \\
-  --name frontend-container \\
-  --restart unless-stopped \\
-  -p 5173:5173 \\
-  ${DOCKER_IMAGE_PREFIX}/my-frontend:${BRANCH}
-  
-echo "Containers started successfully. Checking status..."
-docker ps | grep -E "backend-container|frontend-container"
-
-echo "[SUCCESS] Deployment finished on \$HOSTNAME"
+echo "[SUCCESS] Dev Deployment complete on \$HOSTNAME"
 EOF
-              """
-            } catch (err) {
-              error "[DEPLOY ERROR] SSH deploy to ${target_ip} failed: ${err.message}"
+                        """
+                    }
+                }
             }
-          }
         }
-      }
-    }
-  }
 
-  post {
-    success {
-      echo "Deployment succeeded on branch ${BRANCH}"
+        stage('Deploy to Prod') {
+            agent { label 'agent2' }
+            environment {
+                CONTAINER_PORT = "${DEPLOY_PORT}"
+            }
+            when {
+                branch 'main'
+            }
+            steps {
+                input message: "Bạn có chắc muốn deploy lên môi trường Production?"
+                withCredentials([file(credentialsId: 'ssh-private-key-file', variable: 'SSH_KEY')]) {
+                    script {
+                        sh """
+                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no $SSH_USER@${GCP_VM_PROD} << EOF
+set -e
+trap 'echo "[ERROR] Deployment failed on \$HOSTNAME!" >&2; exit 1' ERR
+
+echo "[INFO] Switching to deployment directory..."
+mkdir -p $DEPLOY_DIR && cd $DEPLOY_DIR
+
+echo "[INFO] Pulling latest Docker image..."
+docker pull ${IMAGE_NAME}:${BUILD_NUMBER}
+
+echo "[INFO] Restarting container..."
+docker stop aspnetapp || true
+docker rm aspnetapp || true
+docker run -d -p ${CONTAINER_PORT}:8080 --name aspnetapp ${IMAGE_NAME}:${BUILD_NUMBER}
+
+echo "[SUCCESS] Prod Deployment complete on \$HOSTNAME"
+EOF
+                        """
+                    }
+                }
+            }
+        }
     }
-    failure {
-      echo "Deployment failed on branch ${BRANCH}"
-    }
-  }
 }
