@@ -46,87 +46,76 @@ Project CI/CD with Jenkins is implemented to achieve an understanding of CI/CD c
 ## 3. Solution Architecture
 
 ### 3.1. Solution Overview
-The system uses Jenkins's agents to ensure: Parallel execution, Scalability, Compatibility, Security, Customization
+The system uses Jenkins's agents to ensure: build, test, and deployment tasks
 
 #### Architecture Diagram:
 <!-- Use Mermaid diagrams for better visualization -->
 ```mermaid
-graph TD
-subgraph AWS Cloud
-direction TB
-VPC[VPC]
-EC2[EC2 - DataSync Agent]
-VGW[AWS Virtual Private Gateway]
-S3[(Amazon S3 Bucket)]
-VPC --> EC2
-VPC --> VGW
-EC2 -->|Port 443| S3
-end
-
-subgraph VPN Tunnel
-VGW <---> VPN[Site-to-Site VPN Tunnel]
-end
-
-subgraph On-Premises
-direction TB
-OnPremLAN[On-Prem Network]
-FileServer[NFS/SMB Server]
-OnPremLAN --> FileServer
-VPN --> OnPremLAN
-end
+flowchart LR
+ subgraph ci["CI"]
+        validate["Validate Branch Name"]
+        checkout["Checkout"]
+        build["Build Image"]
+        test["Run tests"]
+        push["Push to Image Registry"] 
+  end
+ subgraph cd["CD"]
+    direction LR
+        deployDev["Deploy to Development"]
+        deployProd["Deploy to Production"]
+        postAct["Update deployment status onto PR via GitHub Status API"]
+        
+  end
+    start["Start"] --> validate
+    validate --> checkout
+    checkout --> build
+    build --> test
+    test --> push
+    push --> deployDev
+    push --> deployProd
+    deployDev --> postAct
+    deployProd --> postAct
+    postAct --> endi["End"]
 ```
-
-*Priority: Use Mermaid diagrams
-
 ### 3.2. Main Components
 
-#### CI/CD Tools:
-- **CI Tool:** [GitHub Actions, GitLab CI, Jenkins]
-  - Role: [Describe role]
-  - Configuration: [Configuration file]
+- **CI/CD Tool:** Jenkins
+  - Role: Validate Naming Convention
+  - Configuration: ./Jenkinsfile
+  - Strategy: Trigger on Pull Request, Multiple Container Agents
 
-#### Deployment Mechanism:
-- **CD Tool:** [ArgoCD, Helm, kubectl]
-  - Role: [Describe role]
-  - Strategy: [Blue-Green, Rolling Update]
+- **Infrastructure:** Google Cloud Platform
+  - VM's Role: Jenkins server, VM for Development Enviroments, VM for Production Enviroment  
 
-#### Infrastructure:
-- **IaC Tool:** [Terraform, Ansible]
-  - Role: [Provisioning infrastructure]
-  - Modules: [List of modules]
+### 3.3. Execution Pipeline
 
-#### Monitoring & Alerting:
-- **Monitoring:** [Prometheus, Grafana, DataDog]
-- **Logging:** [ELK Stack, Loki, CloudWatch]
-- **Alerting:** [AlertManager, PagerDuty, Slack]
-
-### 3.3. Execution Workflow
-
-#### Automated Workflow:
-1. **Trigger:** [Git push, Pull Request, Schedule]
-2. **Build Phase:**
+#### Automated Pipeline:
+1. **Trigger:** Git push, Pull Request
+2. **Validate Stage:**
+   -  Validate Branch Name Convention
+4. **Checkout Stage:**
    - Code checkout
-   - Dependency installation
-   - Unit tests execution
-   - Code quality checks
-3. **Test Phase:**
-   - Integration tests
-   - Security scanning
-   - Performance tests
-4. **Build Image:**
-   - Docker image build
-   - Image vulnerability scan
+6. **Build Stage:**
+   - Sets up a build environment
+   - Copy project file and restore as distinct layers
+   - Copy source code and publish app
+   - Runtime
+   - Build Docker image
    - Tag and version
-5. **Push Image:**
-   - Push to container registry
-   - Update manifest files
-6. **Deploy:**
-   - Deploy to target environment
-   - Health checks
-   - Smoke tests
-7. **Notification:**
-   - Success/failure notification
-   - Metrics collection
+7. **Test Stage:**
+   - Copy the entire solution into the container
+   - Move to the main project directory 
+   - Restore using the correct architecture
+   - Build project
+   - Test project
+   - Build Docker image (specifically for testing)
+9. **Push Image:**
+   - Push to container registry (Docker Hub)
+10. **Deploy:**
+   - Pull latest Docker image
+   - Deploy to target environment (Dev, Prod)
+11. **Post Actions:**
+   - Success/failure notification (via Github PR)
 
 ## 4. Implementation Guide
 
@@ -135,20 +124,25 @@ end
 #### Repository Structure:
 ```
 project-root/
-├── .github/workflows/           # GitHub Actions workflows
-│   ├── ci.yml
-│   └── cd.yml
-├── compomnet-name-01/                      # Docker configurations
-│   ├── Dockerfile
-│   └── docker-compose.yml
-|   |── Configuration.yml
-|   |__ .env
-├── terraform/                   # Infrastructure as Code
-│   ├── main.tf
-│   └── variables.tf
-├── scripts/                     # Automation scripts
-│   ├── deploy.sh
-│   └── rollback.sh
+├── .github/workflows/           # PR template
+│   └── pull_request_template.md
+├── aspnetapp.test/              # app test
+│   ├── bin/Debug/net9.0/
+│   └── obj/
+|   |── UnitTest1.cs
+|   |__ aspnetapp.test.csproj
+├── aspnetapp                   # app
+│   ├── Pages/
+│   └── Properties/
+|   |── wwwroot/
+|   |__ EnvironmentInfo.cs
+│   ├── Program.cs
+│   └── aspnetapp.csproj
+|   |__ aspnetapp.sln
+├── Dockerfile
+├── Dockerfile.test
+├── Jenkinsfile
+└─ README.md
 ```
 
 #### Key Files:
