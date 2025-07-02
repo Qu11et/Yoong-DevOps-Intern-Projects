@@ -5,7 +5,7 @@ This is my DevOps internship program at YOONG Solutions. This program includes p
 
 ## Project Structure
 
-### 1. [Docker Containers and Monitoring](project-01/monitoring/README.md)
+### 1. [Docker Containers and Monitoring](project-01/README.md)
 - **1.1**: Docker Basics
   - Docker Installation
   - Container Creation and Management
@@ -18,6 +18,14 @@ This is my DevOps internship program at YOONG Solutions. This program includes p
   - Grafana Configuration
   - Basic Dashboard Creation
   - Alert Management
+ 
+### 2. [CI/CD with Jenkins](project-02/README.md)
+- **1.1**: Basic CI Pipeline
+  - Jenkins Setup
+  - Build and Test
+- **1.2**: CD Pipeline
+  - Deployment Configuration
+  - Automated Deployment
 
 ## Each Project includes:
  - Learning Objectives
@@ -28,3 +36,4 @@ This is my DevOps internship program at YOONG Solutions. This program includes p
 
 ## Additional Resources
 - [Docker Documentation](https://docs.docker.com/)
+- [Jenkins.io](https://www.jenkins.io/doc/)
