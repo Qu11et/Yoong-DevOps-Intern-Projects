@@ -2,9 +2,8 @@ project-01/monitoring/dev.env
 project-01/monitoring/sta.env
 project-01/monitoring/pro.env
 
-project-03/.ssh/*
-project-03/.terraform/*
+project-03/.ssh/
+project-03/.terraform/
 project-03/terraform.tfstate
 project-03/terraform.tfstate.backup
 project-03/.terraform.lock.hcl
-project-03/.terraform/providers/registry.terraform.io/hashicorp/azurerm/2.91.0/windows_amd64/terraform-provider-azurerm_v2.91.0_x5.exe
