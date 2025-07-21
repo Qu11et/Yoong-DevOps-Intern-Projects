@@ -1,6 +1,7 @@
 resource "azurerm_subnet" "yoong-subnet-1" {
-  name                 = "yoong-subnet-1"
+  name                 = var.subnet_name
   resource_group_name  = var.resource_group_name
   virtual_network_name = var.virtual_network_name
-  address_prefixes     = ["10.123.1.0/24"]
-  }
+  address_prefixes     = var.address_prefixes
+  //network_security_group_id = var.security_group_id
+}

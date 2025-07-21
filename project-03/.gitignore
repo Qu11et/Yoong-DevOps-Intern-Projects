@@ -1,0 +1,10 @@
+.ssh/
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+
+enviroments/dev/.terraform/
+enviroments/prod/.terraform/
+enviroments/dev/terraform.lock.hcl
+enviroments/prod/terraform.lock.hcl

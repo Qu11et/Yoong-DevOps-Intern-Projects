@@ -1,10 +1,6 @@
 resource "azurerm_virtual_network" "yoong-vn" {
-  name                = "yoong-network"
-  address_space       = ["10.123.0.0/16"]
+  name                = var.virtual_network_name
+  address_space       = var.address_space
   resource_group_name = var.resource_group_name
   location            = var.location
-  
-  tags = {
-    environment = "dev"
-  }
 }

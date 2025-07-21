@@ -1,3 +1,9 @@
+variable "ssh_public_key" {
+  description = "SSH public key used to login to the VM"
+  type        = string
+  default     = ""
+}
+
 variable "resource_group_name" {
   description = "Name of the resource group"
   type        = string
@@ -8,7 +14,9 @@ variable "location" {
   type        = string
 }
 
-variable "public_ip_name" {
-  description = "Name of the public IP address"
+variable "virtual_network_name" {
+  description = "Name of the virtual network"
   type        = string
 }
+
+

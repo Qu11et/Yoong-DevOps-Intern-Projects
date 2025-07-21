@@ -1,0 +1,89 @@
+name: "Deploy Azure Prod Infrastructure with Terraform"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'environments/prod/**'
+  pull_request:
+    paths:
+      - 'environments/prod/**'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform_prod:
+    name: "Terraform Prod Deployment"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./environments/prod
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Log into Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-AzPSSession: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.9.7
+          terraform_wrapper: false
+
+      - name: Run Checkov scan using Docker
+        run: |
+          docker run --rm \
+            -v $(pwd):/workspace \
+            bridgecrew/checkov:latest \
+            -d /workspace \
+            --skip-check CKV2_AZURE_31,CKV_AZURE_178,CKV_TF_1,CKV_GHA_7
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -var "ssh_public_key=${{ secrets.SSH_PUBLIC_KEY }}" -out=tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve tfplan
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_USE_OIDC: true

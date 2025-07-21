@@ -9,3 +9,8 @@ project-03/.terraform/
 project-03/terraform.tfstate
 project-03/terraform.tfstate.backup
 project-03/.terraform.lock.hcl
+
+project-03/enviroments/dev/.terraform/
+project-03/enviroments/prod/.terraform/
+project-03/enviroments/dev/terraform.lock.hcl
+project-03/enviroments/prod/terraform.lock.hcl
