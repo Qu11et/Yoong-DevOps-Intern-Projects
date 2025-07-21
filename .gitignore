@@ -1,1 +1,11 @@
 project-01/pics
+
+project-01/monitoring/dev.env
+project-01/monitoring/sta.env
+project-01/monitoring/pro.env
+
+project-03/.ssh/
+project-03/.terraform/
+project-03/terraform.tfstate
+project-03/terraform.tfstate.backup
+project-03/.terraform.lock.hcl

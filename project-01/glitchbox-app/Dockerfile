@@ -22,3 +22,18 @@ COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 CMD ["/entrypoint.sh"]
+
+
+# Giai đoạn 1: Build ứng dụng
+FROM golang:1.22 AS builder
+WORKDIR /app
+COPY main.go .
+RUN go build -o myapp
+
+# Giai đoạn 2: Image chạy nhẹ
+FROM alpine:latest
+WORKDIR /root/
+COPY --from=builder /app/myapp .
+
+# Lệnh mặc định chạy khi container khởi động
+CMD ["./myapp"]
