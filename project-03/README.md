@@ -187,7 +187,7 @@ terraform
    - Now in the same page, choose Access Control (IAM) --> Add role assignment
    - In "Add role assignment", search for "Storage Blob Data Contributor"
    - Choose "Managed identity" for "Assign access to", then choose your "Subscription" and "Identity"
-   - Finally, in the "providers.tf" file of your Terraform project, define the backend to use your Resource Group, Storage Account, Container, Key (use different key name for Dev and Prod enviroments so that the resources of these two enviroments wont be conflict when created"
+   - Finally, in the "providers.tf" file of your Terraform project, define the backend to use your Resource Group, Storage Account, Container, Key (use different key name for Dev and Prod enviroments so that the resources of these two enviroments wont be conflict when created)
 
 3. **Understand the Terraform project structure:**
    - The project will have reusable modules. Each module will have "main.tf", "variables.tf" and "outputs.tf" files:
@@ -195,18 +195,21 @@ terraform
      + "variables.tf" will be used to declare the input variables accepted by module;
      + "output.tf" will be used to export the output values of the created resource. These values can be used as variables for the arguments in other resources
    - There will be two enviroments in this project (dev and prod). In the folder of each enviroment, we will have "main.tf" file. In "main.tf", we will call the modules we need to used. In each module that we call, we need to enter suitable variables for that modules (we must use all the variables that were defined in module's "variables.tf file), and we can use the "depends_on" argument to ensure that these resources wont get conflict when being created
-   - In "providers.tf", required_providers: Defines the providers required for the project. backend "azurerm": Configures to store Terraform state on Azure Storage (instead of locally). skip_provider_registration = false: Terraform will automatically register the required resource providers in Azure subscription
-   
+   - In "providers.tf":
+     + required_providers: Defines the providers required for the project 
+     + backend "azurerm": Configures to store Terraform state on Azure Storage (instead of locally) 
+     + skip_provider_registration = false: Terraform will automatically register the required resource providers in Azure subscription
+   - In "variables.tf" and "terraform.tfvars": Declare and define frequently used variables to support quick reuse
 
 ### 4.3. Configuration Variables
 
 #### Environment Variables:
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `AZURE_CLIENT_ID` | Client ID |  | Yes |
-| `AZURE_SUBSCRIPTION_ID` | Subscription ID | | Yes |
-| `AZURE_TENANT_ID` | Tenant ID |  | Yes |
-| `SSH_PUBLIC_KEY` | SSH Public key |  | Yes |
+| `AZURE_CLIENT_ID` | Client ID | XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX | Yes |
+| `AZURE_SUBSCRIPTION_ID` | Subscription ID | XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX | Yes |
+| `AZURE_TENANT_ID` | Tenant ID | XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX | Yes |
+| `SSH_PUBLIC_KEY` | SSH Public key | XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX | Yes |
 
 ## 5. Appendix
 
@@ -214,10 +217,8 @@ terraform
 | Tool | Version | Purpose | Documentation |
 |------|---------|---------|---------------|
 | GitHub Actions | - | CI/CD | [docs.github.com](https://docs.github.com/actions) |
-| Terraform | 1.5+ | Infrastructure | [terraform.io](https://terraform.io) |
+| Terraform | 1.12.2 | Infrastructure | [terraform.io](https://terraform.io) |
 
 ### 5.2. References
-- [Official Documentation Links]
-- [Best Practices Guides]
-- [Architecture References]
-- [Security Guidelines]
+- https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs
+- https://medium.com/@almaswebconsulting/github-actions-an-in-depth-guide-for-beginners-514ed6f87a96
