@@ -20,12 +20,22 @@ This is my DevOps internship program at YOONG Solutions. This program includes p
   - Alert Management
  
 ### 2. [CI/CD with Jenkins](project-02/README.md)
-- **1.1**: Basic CI Pipeline
+- **2.1**: Basic CI Pipeline
   - Jenkins Setup
   - Build and Test
-- **1.2**: CD Pipeline
+- **2.2**: CD Pipeline
   - Deployment Configuration
   - Automated Deployment
+
+### 3. [Infrastructure as Code with Terraform](project-03/README.md)
+- **3.1**: Terraform Basics
+  - Terraform Setup
+  - Basic Resource Creation
+  - State Management
+- **3.2**: Advanced Terraform
+  - Module Development
+  - Implement proper structure
+  - Use variables effectively
 
 ## Each Project includes:
  - Learning Objectives
@@ -37,3 +47,5 @@ This is my DevOps internship program at YOONG Solutions. This program includes p
 ## Additional Resources
 - [Docker Documentation](https://docs.docker.com/)
 - [Jenkins.io](https://www.jenkins.io/doc/)
+- [terraform.io](https://terraform.io)
+- [docs.github.com](https://docs.github.com/actions)
