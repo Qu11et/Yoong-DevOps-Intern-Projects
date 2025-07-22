@@ -195,8 +195,7 @@ terraform
      + "variables.tf" will be used to declare the input variables accepted by module;
      + "output.tf" will be used to export the output values of the created resource. These values can be used as variables for the arguments in other resources
    - There will be two enviroments in this project (dev and prod). In the folder of each enviroment, we will have "main.tf" file. In "main.tf", we will call the modules we need to used. In each module that we call, we need to enter suitable variables for that modules (we must use all the variables that were defined in module's "variables.tf file), and we can use the "depends_on" argument to ensure that these resources wont get conflict when being created
-   - In "providers.tf", 
-   - 
+   - In "providers.tf", required_providers: Defines the providers required for the project. backend "azurerm": Configures to store Terraform state on Azure Storage (instead of locally). skip_provider_registration = false: Terraform will automatically register the required resource providers in Azure subscription
    
 
 ### 4.3. Configuration Variables
@@ -204,10 +203,10 @@ terraform
 #### Environment Variables:
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `DOCKER_REGISTRY` | Container registry URL | `docker.io/username` | Yes |
-| `KUBECONFIG` | Kubernetes config path | `~/.kube/config` | Yes |
-| `SLACK_WEBHOOK_URL` | Slack notification URL | `https://hooks.slack.com/...` | No |
-| `ENVIRONMENT` | Deployment environment | `staging/production` | Yes |
+| `AZURE_CLIENT_ID` | Container registry URL | `docker.io/username` | Yes |
+| `AZURE_SUBSCRIPTION_ID` | Kubernetes config path | `~/.kube/config` | Yes |
+| `AZURE_TENANT_ID` | Slack notification URL | `https://hooks.slack.com/...` | No |
+| `SSH_PUBLIC_KEY` | Deployment environment | `staging/production` | Yes |
 
 #### Secrets Management:
 - **GitHub Secrets:** [List of secrets to create]
