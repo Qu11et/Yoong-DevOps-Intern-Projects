@@ -203,26 +203,16 @@ terraform
 #### Environment Variables:
 | Variable | Description | Example | Required |
 |----------|-------------|---------|----------|
-| `AZURE_CLIENT_ID` | Container registry URL | `docker.io/username` | Yes |
-| `AZURE_SUBSCRIPTION_ID` | Kubernetes config path | `~/.kube/config` | Yes |
-| `AZURE_TENANT_ID` | Slack notification URL | `https://hooks.slack.com/...` | No |
-| `SSH_PUBLIC_KEY` | Deployment environment | `staging/production` | Yes |
-
-#### Secrets Management:
-- **GitHub Secrets:** [List of secrets to create]
-- **Kubernetes Secrets:** [ConfigMaps and Secrets]
-- **Cloud Provider Secrets:** [IAM roles, service accounts]
-
-#### Metrics Dashboard:
-[Link to Grafana dashboard or screenshot]
+| `AZURE_CLIENT_ID` | Client ID |  | Yes |
+| `AZURE_SUBSCRIPTION_ID` | Subscription ID | | Yes |
+| `AZURE_TENANT_ID` | Tenant ID |  | Yes |
+| `SSH_PUBLIC_KEY` | SSH Public key |  | Yes |
 
 ## 5. Appendix
 
 ### 5.1. Tools Used
 | Tool | Version | Purpose | Documentation |
 |------|---------|---------|---------------|
-| Docker | 24.0+ | Containerization | [docs.docker.com](https://docs.docker.com) |
-| Kubernetes | 1.28+ | Orchestration | [kubernetes.io](https://kubernetes.io) |
 | GitHub Actions | - | CI/CD | [docs.github.com](https://docs.github.com/actions) |
 | Terraform | 1.5+ | Infrastructure | [terraform.io](https://terraform.io) |
 
