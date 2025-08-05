@@ -1,0 +1,43 @@
+replicaCount: 3
+
+image:
+  tag: latest
+  pullPolicy: Always
+
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: aspnetapp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: Production
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+nodePort:
+  enabled: true
+  port: 30090
+
+

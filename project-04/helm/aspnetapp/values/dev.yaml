@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  tag: dev
+
+ingress:
+  hosts:
+    - host: dev.aspnetapp.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: Development
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+nodePort:
+  enabled: true
+  port: 30080
